@@ -1,0 +1,38 @@
+name: Build_GitHubPages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build_and_deploy:
+    name: Build schemaspy document and deploy gh-pages
+    runs-on: ubuntu-latest
+    container:
+      image: tkiyono/petclinic-doc
+      env:
+        PGPASSWORD: petclinic
+    services:
+      db:
+        image: postgres
+        env:
+          TZ: Asia/Tokyo
+          POSTGRES_PASSWORD: petclinic
+          POSTGRES_USER: petclinic
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Sleep 1s
+        run: sleep 1
+      - name: Setup DB
+        run: psql -f DDL/schema.sql -U petclinic -h db 
+      - name: Execute schemaspy
+        run: java -jar /schemaspy-6.0.0.jar -o ${GITHUB_WORKSPACE}/build -t pgsql -dp /drivers -host db -db petclinic -u petclinic -p petclinic
+      - name: Deploy gh-pages
+        uses: JamesIves/github-pages-deploy-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: build
+          CNAME: github-actions-test.dev.be-geek.net
